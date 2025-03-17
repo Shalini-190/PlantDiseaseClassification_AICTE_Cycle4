@@ -4,20 +4,8 @@ import numpy as np
 import streamlit as st
 import tensorflow as tf
 
-# Check current working directory and files
-print("Current Directory:", os.getcwd())
-print("Files:", os.listdir())
-
-# Load the trained model safely
-try:
-    model_path = os.path.abspath("my_model.keras")
-  # Ensure absolute path
-    print("Loading model from:", model_path)
-    model = tf.keras.models.load_model(model_path)
-except Exception as e:
-    print("Error loading model:", e)
-    st.error("Failed to load the model. Please check the file path and model compatibility.")
-    model = None
+# Load the trained model
+model = tf.keras.models.load_model('best_model.h5')
 
 # Define disease causes and solutions
 disease_info = {
@@ -35,43 +23,39 @@ disease_info = {
 
 # Function to predict disease and provide additional details
 def predict_disease(image_path):
-    try:
-        img = cv2.imread(image_path)
-        img = cv2.resize(img, (224, 224))
-        img = np.expand_dims(img, axis=0) / 255.0
-        
-        prediction = model.predict(img)
-        predicted_class = np.argmax(prediction)
-        class_labels = list(disease_info.keys())
-        
-        if predicted_class >= len(class_labels):
-            return {
-                'Disease': 'Unknown Disease',
-                'Cause': 'Not in database',
-                'Factor': 'Unknown',
-                'Estimated Survival': 'Unknown',
-                'Solution': 'Consult an agricultural expert',
-                'Treatment Possible': 'Unknown',
-                'Recommendation': 'Further diagnosis needed'
-            }
-        
-        disease_name = class_labels[predicted_class]
-        info = disease_info[disease_name]
-        
-        recommendation = 'Remove the plant' if not info['treatment_possible'] else 'Apply treatment'
-        
+    img = cv2.imread(image_path)
+    img = cv2.resize(img, (224, 224))
+    img = np.expand_dims(img, axis=0) / 255.0
+    
+    prediction = model.predict(img)
+    predicted_class = np.argmax(prediction)
+    class_labels = list(disease_info.keys())
+    
+    if predicted_class >= len(class_labels):
         return {
-            'Disease': disease_name,
-            'Cause': info['cause'],
-            'Factor': info['factor'],
-            'Estimated Survival': f"{info['survival_days']} days",
-            'Solution': info['solution'],
-            'Treatment Possible': 'Yes' if info['treatment_possible'] else 'No',
-            'Recommendation': recommendation
+            'Disease': 'Unknown Disease',
+            'Cause': 'Not in database',
+            'Factor': 'Unknown',
+            'Estimated Survival': 'Unknown',
+            'Solution': 'Consult an agricultural expert',
+            'Treatment Possible': 'Unknown',
+            'Recommendation': 'Further diagnosis needed'
         }
-    except Exception as e:
-        print("Error during prediction:", e)
-        return {'Disease': 'Error', 'Solution': 'Prediction failed. Check input image and model.'}
+    
+    disease_name = class_labels[predicted_class]
+    info = disease_info[disease_name]
+    
+    recommendation = 'Remove the plant' if not info['treatment_possible'] else 'Apply treatment'
+    
+    return {
+        'Disease': disease_name,
+        'Cause': info['cause'],
+        'Factor': info['factor'],
+        'Estimated Survival': f"{info['survival_days']} days",
+        'Solution': info['solution'],
+        'Treatment Possible': 'Yes' if info['treatment_possible'] else 'No',
+        'Recommendation': recommendation
+    }
 
 # Streamlit UI
 st.sidebar.title('Plant Disease Prediction System')
@@ -82,13 +66,13 @@ st.markdown("<h1 style='text-align: center;'>Plant Disease Prediction System</h1
 uploaded_file = st.file_uploader("Choose a plant leaf image", type=['jpg', 'png', 'jpeg'])
 
 if uploaded_file is not None:
-    image_path = "temp.jpg"
+    image_path = os.path.join("temp.jpg")
     with open(image_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
     
     st.image(uploaded_file, caption='Uploaded Image', use_column_width=True)
     
-    if st.button("Predict Disease") and model:
+    if st.button("Predict Disease"):
         result = predict_disease(image_path)
         
         st.write(f"**Disease:** {result['Disease']}")
